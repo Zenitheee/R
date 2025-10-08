@@ -1,0 +1,223 @@
+---
+title: "Assignment 02"
+author: "Zenith"
+date: "2025-10-01"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(nycflights13)
+library(gapminder)
+```
+
+# Q1
+```{r}
+large_delays_JFK = flights %>%
+  dplyr::filter(origin == "JFK", dep_delay >= 60) %>%
+  dplyr::select(year, month, day, dep_delay, arr_delay, carrier)
+head(large_delays_JFK, 5)
+```
+
+# Q2
+```{r}
+dplyr::glimpse(large_delays_JFK)
+dim(large_delays_JFK)
+nrow(large_delays_JFK)
+ncol(large_delays_JFK)
+```
+
+# Q3
+```{r}
+large_delays_JFK %>%
+  dplyr::arrange(dplyr::desc(arr_delay)) %>%
+  head(5)
+```
+
+# Q4
+```{r}
+airline_lookup = data.frame(
+  carrier = c("AA", "DL", "UA", "B6", "WN"),
+  airline_name = c("American Airlines", "Delta", "United Airlines", "JetBlue", "Southwest Airlines")
+)
+
+X = large_delays_JFK %>%
+  dplyr::left_join(airline_lookup, by = "carrier")
+```
+
+# Q5
+```{r}
+X = X %>%
+  dplyr::rename(airline = airline_name)
+
+X %>%
+  dplyr::select(airline,dep_delay, arr_delay) %>%
+  head(7)
+```
+
+# Q6
+left_join keep all the rows in large_delays_JFK,if carrier is not in lookup, meaning that airline is missing.
+
+inner_join only keep the row that can match carrier, those can't match will be discarded.
+
+# Q7
+```{r}
+X %>%
+  dplyr::mutate(delay_ratio = arr_delay / dep_delay) %>%
+  dplyr::select(airline, delay_ratio) %>%
+  dplyr::arrange(dplyr::desc(delay_ratio)) %>%
+  head(10)
+```
+
+# Q8
+```{r}
+summary_by_airline = X %>%
+  dplyr::mutate(delay_ratio = arr_delay/dep_delay) %>%
+  dplyr::group_by(airline) %>%
+  dplyr::summarise(
+    n_flights = dplyr::n(),
+    avg_dep_delay = mean(dep_delay, na.rm = TRUE),
+    median_arr_delay = median(arr_delay, na.rm = TRUE),
+    max_delay_ratio = max(delay_ratio, na.rm = TRUE)
+  )
+
+summary_by_airline
+```
+
+# Q9
+```{r}
+missing_by_airline = X %>%
+  dplyr::group_by(airline) %>%
+  dplyr::summarise(
+    missing_dep_Delay = sum(is.na(dep_delay)),
+    missing_arr_delay = sum(is.na(arr_delay))
+  )
+
+missing_by_airline
+```
+
+# Q10
+Random experiment: a repeatable procedure with uncertain but enumerable outcomes.
+
+Event: a subset of the sample space.
+
+Sample space Ω: the set of all possible outcomes.
+
+# Q11
+Event example: “sum equals 7” or “at least one 6.”
+
+Sample space:$\Omega = {(i,j):i,j \in {1...6}}$, size=36.
+
+Total number of events: The power set size of the sample space is $2^{36}$.
+
+Is the empty set an event?: Yes (the power set contains both the empty set and the full set).
+
+# Q12
+Total = 70+9+16+5 = 100
+
+$∣A\cap B∣$ = 70
+
+∣A∣=70+16=86 ⇒ ∣A′∣=100−86=14
+
+$|A \cup B|$ = 86+79-70 = 95
+
+# Q13
+P(A$\cap$B) = 0.70
+
+# Q14
+P(A$\cup$B) = 0.95
+
+# Q15
+no
+
+# Q16
+P(A) = 0.86
+
+P(B) = 0.79
+
+P(A|B)=0.7/0.79=0.8861
+
+P(B|A)=0.7/0.86=0.8140
+
+# Q17
+P(A$\cap$B)=0.7
+
+P(A)*P(B)=0.6794
+
+so, not independent.
+
+# Q18
+P(F)=0.0001,P(M|F)=0.3, P(M|F')=0.01
+
+P(F/M) = 0.3*0.0001/(0.3*0.0001+0.01*0.9999)=0.00299.
+
+# Q19
+P(+)=0.0005
+
+P(p+)=0
+
+P(p+|+)=0
+
+P(-)=0.9995
+
+P(p-)=1
+
+P(p-|-)=1
+
+P(p-|-)P(-)+P(p+|+)P(+)=0.9995
+
+# Q20
+P(p+|+)=0.99
+
+P(p-|-)=0.99
+
+P(p+|-)=0.01
+
+P(+|p+)=0.99*0.0005/(0.099*0.0005+0.01*0.9995)=0.04719
+
+# Q21
+P(A3)=1/3
+
+P(B1$\cap$C2)=$\frac{1}{3}*(\frac{1}{3}*\frac{1}{2}+\frac{1}{3}*1) $=1/6
+
+P(A3$\cap$B1,C2)=1/9
+
+P(A3|B1,C2)=2/3
+
+suggest:switch the door
+
+# Q22
+P(a)=1/3
+
+P(b)=2/3
+
+```{R}
+set.seed(42)
+
+simulate = function(n_trials = 1e5)
+{
+  treasure = sample(1:3,n_trials, replace = TRUE)
+  choice = sample(1:3,n_trials, replace=TRUE)
+  opened = integer(n_trials)
+  for(i in seq_len(n_trials))
+  {
+    candidates = setdiff(1:3,c(choice[i],treasure[i]))
+    if(length(candidates)==1)
+    {
+      opened[i]=candidates
+    }
+    else
+    {
+      opened[i] = sample(candidates,1)
+    }
+  }
+  
+  stay_win = mean(choice==treasure)
+  switched = vapply(seq_len(n_trials),function(i) setdiff(1:3,c(choice[i],opened[i])),integer(1))
+  switch_win = mean(switched==treasure)
+  c(stay=stay_win,switch=switch_win)
+}
+
+simulate(100000)
+
+```

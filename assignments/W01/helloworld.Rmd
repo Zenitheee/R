@@ -1,0 +1,22 @@
+---
+title: "helloworld"
+author: "Zenith"
+date: "2025-09-24"
+output: html_document
+---
+
+# Animals Data Frame Creation
+
+This document demonstrates how to create a data frame in R.
+
+```{r}
+animal=c("Snake", "Ostrich", "Cat", "Spider")
+
+num_legs=c(0,2,4,8)
+
+animals_df=data.frame(animal,num_legs)
+```
+
+```{r}
+print(animals_df)
+```

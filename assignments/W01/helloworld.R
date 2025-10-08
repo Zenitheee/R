@@ -1,0 +1,4 @@
+animal = c("Snake", "Ostrich", "Cat", "Spider")
+num_legs=c(0,2,4,8)
+animals_df=data.frame(animal,num_legs)
+print(animals_df)
