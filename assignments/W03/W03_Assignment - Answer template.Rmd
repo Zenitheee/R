@@ -1,0 +1,399 @@
+---
+title: "Assignment 03 - Solutions"
+subtitle: "Statistical Computing and Empirical Methods"
+author: "YOUR_NAME (YOUR_STUDENT_ID)"
+output: pdf_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## A word of advice
+Think of the SCEM labs as going to the gym: if you pay a gym membership, but instead of working out you use a machine to lift the weights for you, you won't get the benefits.
+
+ChatGPT, DeepSeek, Claude and other GenAI tools can provide answers to most of the questions below. Before you try that, please consider the following: answering the specific questions below is not the point of this assignment. Instead, the questions are designed to give you the chance to develop a better understanding of estimation concepts and a certain level of _**statistical thinking**_. These are essential skills for any data scientist, even if they end up using generative AI - to write an effective prompt and to catch the common (often subtle) errors that AI produces when trying to solve anything non-trivial.
+
+A very important part of this learning involves not having the answers ready-made for you, but instead taking the time to actually search for the answer, trying something, getting it wrong, and trying again.
+
+So, make the best use of this session. The assignments are not marked, so it is much better to try the yourself even if you get incorrect answers (you'll be able to correct yourself later when you receive feedback) than to submit a perfect, but GPT'd solution.
+
+-----
+
+## IMPORTANT NOTES: 
+- **DO NOT** change the code block names. Enter your solutions to each question into the predefined code blocks. 
+- **DO NOT** add calls to `install.packages()` into your solutions. Some questions may require you to load packages using `library()`. Please do not use any other packages except the ones explicitly listed in the "setup" code block below. 
+
+---
+
+## Setup
+
+This code block below sets up your session. The only think you should change in it is to replace `ABCDEF` by your student ID number, which will be used as the seed for your random number generators.
+
+```{r setup, echo=FALSE}
+## We will use your student ID as the seed for the random number generator.
+MY_STUDENT_ID <- 24089 # <-- Replace ABCDEF by your student ID number  
+  
+
+## These are the packages you can use (if needed) for the present assignment.
+## If needed, you can run install.packages(tidyverse) in your machine, but 
+## **do not** include any calls to install.packages() as part of your solution.
+  
+permitted.packages <- c("ggplot2", "dplyr", "tidyverse", "nycflights13") # <--- Don't change this
+
+knitr::opts_chunk$set(echo = TRUE) # <---- Don't change this
+```
+
+## Part I: Point estimation of parameters
+
+### Q1. Simulating data and estimating the mean
+
+```{r Q1a}
+## Question 1.a
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+xunif = runif(n = 12, min = 50, max = 80)
+
+xunif.mean = mean(xunif)
+xunif.var = var(xunif)
+
+xunif
+xunif.mean
+xunif.var
+```
+
+```{r Q1b}
+## Question 1.b
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+xbern = rbinom(n = 200, size = 1, prob = 0.25)
+
+xbern.p = mean(xbern)
+
+true.p = 0.25
+diff.p = xbern.p - true.p
+
+table(xbern)
+xbern.p
+diff.p
+```
+
+------------------------------------------------------------------------
+
+### Q2. Sampling distribution of the mean
+
+```{r Q2a}
+## Question 2.a
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+xbar.vector = replicate(1000, mean(rnorm(n=5, mean=4, sd = 2)))
+
+hist(
+  xbar.vector,
+  breaks = 30,
+  main = "Sampling distribution",
+  xlab = "xbar"
+)
+```
+
+```{r Q2b}
+## Question 2.b
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+xbar.mean = mean(xbar.vector)
+xbar.sd = sd(xbar.vector)
+
+theo.mean = 4
+theo.se = 2/sqrt(5)
+
+diff.mean = xbar.mean - theo.mean
+diff.se = xbar.sd - theo.se
+
+xbar.mean; xbar.sd
+theo.mean; theo.se
+diff.mean; diff.se
+```
+
+------------------------------------------------------------------------
+
+### Q3. Bias of an estimator
+
+```{r Q3}
+## Question 3
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+xvar.vector = replicate(
+  2000,
+  {
+    x = rnorm(n = 20, mean = 0, sd = 1)
+    mean((x - mean(x)^2))
+  }
+)
+xvar.bias = mean(xvar.vector)-1
+
+mean(xvar.vector)
+xvar.bias
+```
+
+------------------------------------------------------------------------
+
+### Discussion: Maximum Likelihood Estimation (MLE)
+
+Example of using the R function `optim()` to estimate the MLE values for the mean 
+and variance of a normal distribution. _You don't need to change anything in the 
+code block below._
+
+```{r example}
+## This is just an example
+
+set.seed(1)
+n    <- 100000 # sample size
+mu   <- 12     # true mean
+var  <- 9      # true variance
+
+
+# Generate sample
+x <- rnorm(n, mean = mu, sd = sqrt(var))
+
+# log-likelihood for Normal(mu, sigma^2), given a sample X
+# (Check lecture slides for the formula)
+llik <- function(par, X) {
+  mu     <- par[1]
+  sigma2 <- par[2]
+  n      <- length(X)
+  if (sigma2 <= 0) return(Inf)  # variance must be positive
+  llik <- -n * log(sqrt(2 * pi * sigma2)) - 0.5 * sum((X - mu)^2 / sigma2)
+  return(llik)
+}
+
+# Initial guesses for mu and sigma^2 
+# (any finite Real values of mu and of sigma2 > 0 should work)
+init <- c(mu = 0, sigma2 = 1) 
+
+# Run optimization
+fit <- optim(par = init, fn = llik, X = x, 
+             method = "L-BFGS-B",         # optimisation method to use
+             lower = c(-Inf, 1e-9),       # Enforce positive variance (minimal allowed value: 10^-9)
+             control = list(fnscale = -1) # To make it a maximisation problem
+             )
+
+fit$par
+```
+
+### Q4: Numerical computation of MLE value
+
+```{r Q4a}
+## Question 4.a
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+x = rcauchy(10000, location = 5 , scale = 1)
+
+nll = function(theta, x) sum(log1p((x-theta)^2))
+
+opt = optim(
+  par = median(x),
+  fn = function(th) nll(th, x),
+  method = "Brent",
+  lower = min(x)-10,
+  upper = max(x)+10
+)
+
+cauchy_mle_theta = opt$par
+theta_median = median(x)
+
+cauchy_mle_theta
+theta_median
+```
+
+```{r Q4b}
+## Question 4.b
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+n_rep = 2000
+n = 50
+
+nll = function(theta, x) sum(log1p((x-theta)^2))
+
+cauchy.vector = replicate(
+  n_rep,
+  {
+    x = rcauchy(n, location = 8, scale = 1)
+    opt = optim(
+      par = median(x),
+      fn = function(th) nll(th,x),
+      method= "Brent",
+      lower = min(x) - 10,
+      upper = max(x) + 10
+    )
+    opt$par
+  }
+)
+
+plot(density(cauchy.vector),main="MLE of theta for Cauchy", xlab = "theta.hat")
+abline(v=8,col="red",lty = 2)
+```
+
+------------------------------------------------------------------------
+
+## Part II: Data visualisation
+
+### Q5: Basic plotting
+
+```{r Q5a}
+## Question 5.a
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+library(nycflights13)
+library(dplyr)
+library(ggplot2)
+
+delayed_flights_2h = flights |>
+  filter(dep_delay > 0, dep_delay < 120) |>
+  slice_sample(prop = 0.10)
+
+ggplot(delayed_flights_2h, aes(x = dep_delay)) +
+  geom_histogram(bins = 30, color = "white", fill = "steelblue") + 
+  labs(
+    title = "Departure delays (0-120 min), 10% sample",
+    x = "Departure delay (minutes)",
+    y = "Count"
+  )
+```
+
+```{r Q5b}
+## Question 5.b
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+ggplot(delayed_flights_2h, aes(x = dep_delay)) +
+  geom_density(fill = "steelblue", alpha = 0.4, color = NA) +
+  labs(
+    title = "Density of departure delays (0-120 min), 10% sample",
+    x = "Departure delay (minutes)",
+    y = "Density"
+  )
+```
+
+
+```{r Q5c}
+## Question 5.c
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+ggplot(delayed_flights_2h, aes(x = dep_delay, y = origin, fill = origin)) +
+  geom_violin(alpha = 0.7) +
+  labs(
+    title = "Departure delays by origin (0-120 min), 10% sample",
+    x = "dep_delay",
+    y = "origin"
+  )
+```
+
+
+```{r Q5d}
+## Question 5.d
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+ewr_all = flights |>
+  filter(origin == "EWR") |>
+  slice_sample(prop = 0.1)
+
+ewr_all = ewr_all |>
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+
+ggplot(ewr_all, aes(x = dep_delay, y = arr_delay)) +
+  geom_point(color = "red", alpha = 0.2) +
+  labs(
+    x = "dep_delay",
+    y = "arrive_delay"
+  )
+```
+
+
+### Q6: Facetting and annotation
+
+
+```{r Q6a}
+## Question 6.a
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+flight_sample = flights|>
+  filter(!is.na(dep_delay), !is.na(arr_delay))|>
+  slice_sample(prop = 0.9)
+
+ggplot(data = flight_sample, aes(x = dep_delay, y = arr_delay, color = origin)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE, color = "black") +
+  facet_wrap(~ origin) +
+  labs(
+    x = "dep_delay",
+    y = "arr_delay"
+  )
+##There is a positive, and linear relationship between departure delays and arrival delays across all three airports.
+```
+
+```{r Q6b}
+## Question 6.b
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+correlation_by_origin = flight_sample |>
+  group_by(origin)|>
+  summarise(cor=cor(dep_delay, arr_delay,
+                    method = "spearman",
+                    use = "pairwise.complete.obs"))
+
+  print(correlation_by_origin)
+```
+
+
+```{r Q6c}
+## Question 6.c
+set.seed(MY_STUDENT_ID) # <--- Don't change this
+
+# Your code here
+##
+labels = correlation_by_origin |>
+  mutate(label_text = paste("corr = ", round(cor,3)))
+
+base_plot = ggplot(data = flight_sample, aes(x = dep_delay, y = arr_delay, color = origin)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(se = FALSE, color = "black") +
+  facet_wrap(~ origin) +
+  labs(
+    x = "dep_delay",
+    y = "arr_delay"
+  )
+
+final_plot = base_plot + 
+  geom_text(
+    data = labels,
+    aes(x = 250, y=950, label = label_text),
+    inherit.aes = FALSE,
+    size = 3.5
+  )
+
+print(final_plot)
+```
